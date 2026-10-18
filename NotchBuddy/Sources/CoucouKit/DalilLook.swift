@@ -1,20 +1,15 @@
 import SwiftUI
 import QuartzCore
 
-/// Dalil's figure in the notch. Nothing of Mochi's blob: each look draws its whole
-/// figure from the engine's live values (BotEngine keeps the tweens, the states,
-/// the badges and the particles). Picked at launch from UserDefaults `dalilLook`
-/// (`defaults write fr.louisraille.NotchBuddy dalilLook balise`); an unknown
-/// value falls back to the default.
+/// Dalil's figure in the notch: a lighthouse. Dalil means "guide"; the light is his
+/// gaze. Chosen by Ismael on 18/10/2026 after the CSS preview (dalil-phare.html).
+/// The engine (BotEngine) keeps the tweens, states, badges and particles; this file
+/// draws the whole figure from the engine's live values. `dalilLook` in UserDefaults
+/// is kept for a future second look; any unknown value falls back to the lighthouse.
 enum DalilLook: String, CaseIterable, Sendable {
-    /// Bookmark ribbon: a vertical band with a dovetail tail and a fold that breathes.
-    case signet
-    /// Path marker: two nested chevrons whose gap breathes and that lean where he looks.
-    case balise
-    /// Asymmetric crystal crossed by a ray of light that pulses and points.
-    case prisme
+    case phare
 
-    static let fallback: DalilLook = .balise
+    static let fallback: DalilLook = .phare
     @MainActor static var current: DalilLook = fallback
 
     @MainActor static func load(from defaults: UserDefaults = .standard) {
@@ -31,214 +26,227 @@ enum DalilLook: String, CaseIterable, Sendable {
     var eyeMult: CGFloat { 1 }
     func drawMark(ctx: inout GraphicsContext, R: CGFloat, rx: CGFloat, ry: CGFloat, isMini: Bool) {}
 
-    /// Every look here draws its whole figure.
+    /// The look draws its whole figure (no Mochi body, hands or outfits).
     var ownsDrawing: Bool { true }
 
-    // MARK: - Palette
+    // MARK: - Palette (same as the preview)
 
-    /// Identity colours: ivory body, dark slate line, amber light.
     static let ivory: (CGFloat, CGFloat, CGFloat) = (0.953, 0.937, 0.890)   // #F3EFE3
+    static let shade: (CGFloat, CGFloat, CGFloat) = (0.812, 0.784, 0.722)   // #CFC8B8
     static let slate = Color(red: 0.141, green: 0.165, blue: 0.200)         // #242A33
-    static let amber = Color(red: 0.882, green: 0.690, blue: 0.302)         // #E1B04D
+    static let amber = Color(red: 0.839, green: 0.659, blue: 0.282)         // #D6A848
+    static let warm  = Color(red: 1.0,   green: 0.914, blue: 0.690)         // #FFE9B0
+    static let red   = Color(red: 0.961, green: 0.314, blue: 0.369)         // #F5505E
 
-    // MARK: - Expression, from the engine's eye shape
-
-    /// What the figure "feels", read from the state's eye shape (and the emotes).
-    struct Mood {
-        var lift: CGFloat = 0      // -1 sagging … +1 lifted
-        var spread: CGFloat = 1    // 0 shut … 1 open … 1.3 wide
-        var shake: CGFloat = 0     // 0 … 1 trembling
-        var twist: CGFloat = 0     // 0 … 1 spinning (dizzy)
-        var dim: CGFloat = 0       // 0 … 1 light fading (sleep)
-        var broken: CGFloat = 0    // 0 … 1 the line breaks (error)
-    }
-
-    @MainActor static func mood(of engine: BotEngine) -> Mood {
-        let shape = engine.eyeOverride ?? engine.cfg.eye
-        var m = Mood()
-        switch shape {
-        case .happy, .heart, .star: m.lift = 1; m.spread = 1.15
-        case .wide:                 m.spread = 1.3; m.lift = 0.4
-        case .flat, .line:          m.broken = 1; m.lift = -0.5; m.spread = 0.6
-        case .closed:               m.spread = 0.15; m.dim = 1; m.lift = -0.7
-        case .tired:                m.lift = -0.8; m.spread = 0.5; m.dim = 0.4; m.shake = 0.5
-        case .spiral:               m.twist = 1
-        case .wink:                 m.lift = 0.6; m.spread = 0.8
-        case .cup, .dot, .pill:     break
-        }
-        // Blink / squint of the engine becomes a short narrowing.
-        m.spread *= 0.4 + 0.6 * engine.open
-        return m
-    }
-
-    /// Body colour: identity mixed with the state's colour by its tint; minis keep the flat agent colour.
-    @MainActor static func bodyColor(_ engine: BotEngine, base: (CGFloat, CGFloat, CGFloat)) -> Color {
+    /// Identity colour mixed with the state's colour by its tint; minis keep the flat agent colour.
+    @MainActor static func mixed(_ engine: BotEngine, base: (CGFloat, CGFloat, CGFloat)) -> Color {
         if let bc = engine.bodyColor { return Color(cgColor: bc) }
         let t = engine.tint * 0.75
         let c = engine.col
         return Color(red: base.0 + (c.0 - base.0) * t, green: base.1 + (c.1 - base.1) * t, blue: base.2 + (c.2 - base.2) * t)
     }
 
+    // MARK: - The light's programme, per state
+
+    /// What the beam does: its turning speed (rad/s), a fixed heading, a pitch, how bright,
+    /// whether it rolls, and whether the lamp itself is out, red or a mere ember.
+    struct Light {
+        var speed: CGFloat = 0.70      // 2π / 9 s at rest
+        var heading: CGFloat? = nil    // fixed yaw instead of turning
+        var pitch: CGFloat = 0.10      // slightly down, towards the pills
+        var bright: CGFloat = 1
+        var roll: Bool = false
+        var sweep: CGFloat = 0         // > 0: oscillate ±sweep instead of turning
+        var pulse: Bool = false
+        var lamp: LampMode = .lit
+        enum LampMode { case lit, ember, red, off }
+    }
+
+    @MainActor static func light(for engine: BotEngine) -> Light {
+        var l = Light()
+        switch engine.state {
+        case .idle:      break
+        case .working:   l.speed = 2.4; l.bright = 1
+        case .thinking:  l.speed = 1.0; l.bright = 0.8; l.pitch = -0.25
+        case .searching: l.sweep = 0.9; l.speed = 2.6
+        case .approval:  l.heading = -0.35; l.pulse = true; l.pitch = 0.18
+        case .question:  l.heading = 0.25; l.pulse = true; l.pitch = -0.55
+        case .finished:  l.speed = 1.5; l.bright = 0.95
+        case .error:     l.bright = 0; l.lamp = .red
+        case .ratelimit: l.speed = 0.45; l.bright = 0.35
+        case .sleeping:  l.bright = 0; l.lamp = .ember
+        case .dizzy:     l.speed = 7; l.roll = true; l.bright = 0.8
+        }
+        if let e = engine.eyeOverride {
+            switch e {
+            case .closed: l.bright *= 0.3                  // a blink: the light dips
+            case .happy, .heart, .star: l.bright = 1; l.pulse = true
+            case .flat, .line: l.bright = 0; l.lamp = .red
+            case .spiral: l.speed = 7; l.roll = true
+            default: break
+            }
+        }
+        return l
+    }
+
     // MARK: - Drawing
 
     @MainActor
     func drawFigure(engine: BotEngine, ctx: inout GraphicsContext, R: CGFloat) {
-        let m = Self.mood(of: engine)
         let now = CGFloat(CACurrentMediaTime())
-        switch self {
-        case .signet: drawSignet(engine, &ctx, R, m, now)
-        case .balise: drawBalise(engine, &ctx, R, m, now)
-        case .prisme: drawPrisme(engine, &ctx, R, m, now)
-        }
-    }
+        let mini = engine.isMini
+        let body = Self.mixed(engine, base: Self.ivory)
+        let shade = Self.mixed(engine, base: Self.shade)
+        let l = Self.light(for: engine)
 
-    // Signet: ribbon 1.1R wide, 2.1R tall, dovetail at the bottom, fold on the top right.
-    @MainActor
-    private func drawSignet(_ e: BotEngine, _ ctx: inout GraphicsContext, _ R: CGFloat, _ m: Mood, _ now: CGFloat) {
-        let w = R * 1.1, h = R * 2.1
-        let sway = e.yaw * R * 0.35                     // the tail follows where he looks
-        let twist = m.twist * sin(now * 9) * R * 0.25
-        let notch = R * 0.36 * (1 - 0.5 * m.dim)
-        var band = Path()
-        band.move(to: CGPoint(x: -w / 2, y: -h / 2))
-        band.addLine(to: CGPoint(x: w / 2, y: -h / 2))
-        band.addLine(to: CGPoint(x: w / 2 + sway + twist, y: h / 2))
-        band.addLine(to: CGPoint(x: sway, y: h / 2 - notch))
-        band.addLine(to: CGPoint(x: -w / 2 + sway - twist, y: h / 2))
-        band.closeSubpath()
-        let fill = Self.bodyColor(e, base: Self.ivory)
-        ctx.fill(band, with: .color(fill))
-        if e.isMini { return }
+        // Geometry, in body coordinates (origin at the body centre). The figure spans
+        // about ±1.05R vertically, like Mochi, so badges and particles keep their places.
+        let baseY = R * 1.00, galleryY = -R * 0.62, lanternTop = -R * 0.90, lampY = -R * 0.76
+        let baseHalf = R * (mini ? 0.42 : 0.36), topHalf = R * (mini ? 0.26 : 0.20)
+        let lanternHalf = R * (mini ? 0.26 : 0.18)
 
-        // Shadow along the left edge: a ribbon has a thickness.
-        var edge = ctx
-        edge.clip(to: band)
-        edge.fill(band, with: .linearGradient(Gradient(colors: [Color.black.opacity(0.16), .clear]),
-                                              startPoint: CGPoint(x: -w / 2, y: 0), endPoint: CGPoint(x: -w / 2 + R * 0.5, y: 0)))
+        // Beam direction: yaw turns with time (or sits on a heading), the engine's own yaw
+        // (where he looks) and pitch add to it; roll tilts the cone when dizzy.
+        let turn: CGFloat
+        if let h = l.heading { turn = h }
+        else if l.sweep > 0 { turn = sin(now * l.speed) * l.sweep }
+        else { turn = (now * l.speed).truncatingRemainder(dividingBy: .pi * 2) }
+        let yaw = turn + engine.yaw * 1.2
+        let pitch = l.pitch - engine.pitch * 0.8
+        let roll = l.roll ? now * 6 : engine.roll
+        let dir = (x: sin(yaw) * cos(pitch), y: -sin(pitch), z: cos(yaw) * cos(pitch))   // z > 0: towards the viewer
+        let behind = dir.z < 0
+        let breath = 0.5 + 0.5 * sin(now * 1.8 + CGFloat(engine.t0.truncatingRemainder(dividingBy: 10)))
+        var bright = l.bright * (0.78 + 0.22 * breath)
+        if l.pulse { bright *= 0.6 + 0.4 * (0.5 + 0.5 * sin(now * 6)) }
+        if behind { bright *= 0.55 }
 
-        // The fold: a corner turned over at the top right, opening with the breath and the mood.
-        let breath = 0.5 + 0.5 * sin(now * 1.6 + CGFloat(e.t0.truncatingRemainder(dividingBy: 10)))
-        let openAmt = max(0.08, min(1, m.spread * (0.55 + 0.45 * breath)))
-        let f = R * (0.42 + 0.38 * openAmt) * (1 + 0.25 * m.lift)
-        var fold = Path()
-        fold.move(to: CGPoint(x: w / 2, y: -h / 2))
-        fold.addLine(to: CGPoint(x: w / 2 - f, y: -h / 2))
-        fold.addLine(to: CGPoint(x: w / 2, y: -h / 2 + f))
-        fold.closeSubpath()
-        ctx.fill(fold, with: .color(Self.slate.opacity(0.85 - 0.5 * Double(m.dim))))
-
-        // A thin amber line down the band: the thread. Broken on error, trembling on fear.
-        let tremble = (m.shake + m.broken * 0.6) * sin(now * 40) * R * 0.05
-        let x0 = -w * 0.18 + tremble
-        var thread = Path()
-        if m.broken > 0.5 {
-            thread.move(to: CGPoint(x: x0, y: -h * 0.36)); thread.addLine(to: CGPoint(x: x0, y: -h * 0.05))
-            thread.move(to: CGPoint(x: x0 + R * 0.12, y: h * 0.05)); thread.addLine(to: CGPoint(x: x0 + R * 0.12 + sway * 0.5, y: h * 0.32))
-        } else {
-            thread.move(to: CGPoint(x: x0, y: -h * 0.36))
-            thread.addQuadCurve(to: CGPoint(x: x0 + sway * 0.6, y: h * 0.34), control: CGPoint(x: x0 + m.lift * R * 0.2, y: 0))
-        }
-        ctx.stroke(thread, with: .color(Self.amber.opacity(1 - 0.7 * Double(m.dim))),
-                   style: StrokeStyle(lineWidth: max(1, R * 0.07), lineCap: .round))
-    }
-
-    // Balise: two chevrons pointing up, nested, like a path marker. Lean = yaw, gap = breath.
-    @MainActor
-    private func drawBalise(_ e: BotEngine, _ ctx: inout GraphicsContext, _ R: CGFloat, _ m: Mood, _ now: CGFloat) {
-        let fill = Self.bodyColor(e, base: Self.ivory)
-        let breath = 0.5 + 0.5 * sin(now * 1.7 + CGFloat(e.t0.truncatingRemainder(dividingBy: 10)))
-        let lean = e.yaw * 0.55 + m.twist * sin(now * 7) * 0.8
-        let half = R * 0.95
-        // Height of the point above the arms: flattens on error/sleep, rises when happy.
-        let peak = R * (0.62 + 0.35 * m.lift) * max(0.12, m.spread) * (1 - 0.6 * m.broken)
-        let thick = R * (e.isMini ? 0.46 : 0.40)
-        let gap = R * (0.34 + 0.14 * breath) * (0.3 + 0.7 * m.spread)
-        let tremble = (m.shake + m.broken) * sin(now * 38) * R * 0.04
-
-        func chevron(_ y: CGFloat, _ k: CGFloat, _ jitter: CGFloat) -> Path {
+        func beam(into c: inout GraphicsContext) {
+            guard bright > 0.03, !mini else { return }
+            let len = R * 2.1 * (0.5 + 0.5 * sqrt(dir.x * dir.x + dir.y * dir.y) + 0.25 * max(0, dir.z))
+            let spread = R * 0.34 * (0.35 + 0.65 * (dir.z + 1) / 2)   // wider when it comes towards the viewer
+            let o = CGPoint(x: 0, y: lampY)
+            let far = CGPoint(x: dir.x * len, y: lampY + dir.y * len)
+            // Perpendicular to the beam on screen, tilted by the roll.
+            let ang = atan2(far.y - o.y, far.x - o.x)
+            let px = -sin(ang) * spread * abs(cos(roll)) , py = cos(ang) * spread * abs(cos(roll))
             var p = Path()
-            p.move(to: CGPoint(x: -half * k + jitter, y: y))
-            p.addLine(to: CGPoint(x: lean * R * 0.5 + jitter, y: y - peak * k))
-            p.addLine(to: CGPoint(x: half * k + jitter, y: y))
-            return p
+            p.move(to: o)
+            p.addLine(to: CGPoint(x: far.x + px, y: far.y + py))
+            p.addLine(to: CGPoint(x: far.x - px, y: far.y - py))
+            p.closeSubpath()
+            c.fill(p, with: .linearGradient(
+                Gradient(stops: [
+                    .init(color: Self.warm.opacity(Double(0.95 * bright)), location: 0),
+                    .init(color: Self.amber.opacity(Double(0.6 * bright)), location: 0.35),
+                    .init(color: Self.amber.opacity(0), location: 1),
+                ]),
+                startPoint: o, endPoint: far))
         }
-        let style = StrokeStyle(lineWidth: thick, lineCap: .round, lineJoin: .round)
-        var c = ctx
-        if m.twist > 0.5 { c.rotate(by: .radians(Double(sin(now * 7) * 0.5))) }
-        c.stroke(chevron(R * 0.78, 1.0, -tremble), with: .color(fill), style: style)
-        let upperY = R * 0.78 - gap - thick * 0.9
-        c.stroke(chevron(upperY, 0.78, tremble), with: .color(fill), style: style)
-        if e.isMini { return }
 
-        // The amber light at the point of the upper chevron: it breathes, dims when sleeping,
-        // goes out on error and doubles when finished.
-        let tip = CGPoint(x: lean * R * 0.5 + tremble, y: upperY - peak * 0.78)
-        let glow = (0.75 + 0.25 * breath) * (1 - 0.8 * m.dim) * (1 - m.broken)
-        if glow > 0.05 {
-            let r = R * 0.17 * glow * (1 + 0.3 * m.lift)
-            var dot = Path(); dot.addEllipse(in: CGRect(x: tip.x - r, y: tip.y - r, width: 2 * r, height: 2 * r))
-            c.fill(dot, with: .color(Self.amber))
-            if m.lift > 0.8 {
-                var halo = Path(); halo.addEllipse(in: CGRect(x: tip.x - r * 2, y: tip.y - r * 2, width: 4 * r, height: 4 * r))
-                c.stroke(halo, with: .color(Self.amber.opacity(0.6)), style: StrokeStyle(lineWidth: max(1, R * 0.05)))
-            }
-        } else if m.broken > 0.5 {
-            // Error: the light is out, a short dark dash crosses the point.
-            var dash = Path()
-            dash.move(to: CGPoint(x: tip.x - R * 0.2, y: tip.y + R * 0.1)); dash.addLine(to: CGPoint(x: tip.x + R * 0.2, y: tip.y - R * 0.1))
-            c.stroke(dash, with: .color(Self.slate.opacity(0.7)), style: StrokeStyle(lineWidth: max(1, R * 0.07), lineCap: .round))
+        // 1. Beam behind the tower when it points away.
+        if behind { beam(into: &ctx) }
+
+        // 2. Rock and base.
+        if !mini {
+            var rock = Path()
+            rock.move(to: CGPoint(x: -R * 0.62, y: baseY + R * 0.10))
+            rock.addQuadCurve(to: CGPoint(x: R * 0.62, y: baseY + R * 0.10), control: CGPoint(x: 0, y: baseY - R * 0.16))
+            rock.closeSubpath()
+            ctx.fill(rock, with: .color(Self.slate.opacity(0.9)))
+            var plinth = Path()
+            plinth.move(to: CGPoint(x: -R * 0.46, y: baseY))
+            plinth.addQuadCurve(to: CGPoint(x: R * 0.46, y: baseY), control: CGPoint(x: 0, y: baseY - R * 0.2))
+            plinth.closeSubpath()
+            ctx.fill(plinth, with: .color(shade))
         }
-    }
 
-    // Prisme: an asymmetric crystal (irregular pentagon) with a ray of light through it.
-    @MainActor
-    private func drawPrisme(_ e: BotEngine, _ ctx: inout GraphicsContext, _ R: CGFloat, _ m: Mood, _ now: CGFloat) {
-        let fill = Self.bodyColor(e, base: Self.ivory)
-        let breath = 0.5 + 0.5 * sin(now * 1.5 + CGFloat(e.t0.truncatingRemainder(dividingBy: 10)))
-        let tremble = (m.shake + m.broken) * sin(now * 36) * R * 0.04
-        let sag = -m.lift * R * 0.12 + m.dim * R * 0.15
-        let pts = [
-            CGPoint(x: -R * 0.55 + tremble, y: -R * 0.95 + sag),
-            CGPoint(x: R * 0.75, y: -R * 0.65 + sag * 0.5),
-            CGPoint(x: R * 0.95 + tremble, y: R * 0.45),
-            CGPoint(x: R * 0.10, y: R * 0.98),
-            CGPoint(x: -R * 0.95 - tremble, y: R * 0.30),
-        ]
-        var crystal = Path(); crystal.move(to: pts[0]); for p in pts.dropFirst() { crystal.addLine(to: p) }; crystal.closeSubpath()
-        var c = ctx
-        if m.twist > 0.5 { c.rotate(by: .radians(Double(now * 4))) }
-        c.fill(crystal, with: .color(fill))
-        if e.isMini { return }
-
-        // Facets: two darker triangles give the volume.
-        var facet = Path(); facet.move(to: pts[0]); facet.addLine(to: pts[3]); facet.addLine(to: pts[4]); facet.closeSubpath()
-        c.fill(facet, with: .color(Color.black.opacity(0.10)))
-        var facet2 = Path(); facet2.move(to: pts[1]); facet2.addLine(to: pts[2]); facet2.addLine(to: pts[3]); facet2.closeSubpath()
-        c.fill(facet2, with: .color(Color.black.opacity(0.05)))
-        var rim = c; rim.clip(to: crystal)
-
-        // The ray: enters on the left, bends inside, points where he looks. Pulses, dims, breaks.
-        let bright = (0.7 + 0.3 * breath) * (1 - 0.85 * m.dim) * (0.35 + 0.65 * m.spread)
-        let aim = CGPoint(x: R * 0.95, y: -R * 0.1 - e.yaw * R * 0.6 - e.pitch * R * 0.4 - m.lift * R * 0.25)
-        let entry = CGPoint(x: -R * 0.95, y: R * 0.15)
-        let bend = CGPoint(x: -R * 0.1, y: R * 0.1 + m.lift * R * 0.1)
-        var ray = Path()
-        if m.broken > 0.5 {
-            ray.move(to: entry); ray.addLine(to: CGPoint(x: bend.x - R * 0.12, y: bend.y))
-            ray.move(to: CGPoint(x: bend.x + R * 0.12, y: bend.y - R * 0.18 + tremble)); ray.addLine(to: aim)
+        // 3. Tower, with its shadow side and two slate bands.
+        var tower = Path()
+        tower.move(to: CGPoint(x: -baseHalf, y: baseY))
+        tower.addLine(to: CGPoint(x: -topHalf, y: galleryY))
+        tower.addLine(to: CGPoint(x: topHalf, y: galleryY))
+        tower.addLine(to: CGPoint(x: baseHalf, y: baseY))
+        tower.closeSubpath()
+        if mini {
+            ctx.fill(tower, with: .color(body))
         } else {
-            ray.move(to: entry); ray.addLine(to: bend); ray.addLine(to: aim)
+            ctx.fill(tower, with: .linearGradient(Gradient(stops: [
+                .init(color: body, location: 0), .init(color: body, location: 0.55), .init(color: shade, location: 1),
+            ]), startPoint: CGPoint(x: -baseHalf, y: 0), endPoint: CGPoint(x: baseHalf, y: 0)))
+            var bands = ctx
+            bands.clip(to: tower)
+            for y in [R * 0.05, R * 0.50] {
+                var band = Path()
+                band.addRoundedRect(in: CGRect(x: -baseHalf, y: y - R * 0.035, width: baseHalf * 2, height: R * 0.07), cornerSize: CGSize(width: R * 0.03, height: R * 0.03))
+                bands.fill(band, with: .color(Self.slate.opacity(0.55)))
+            }
+            // Gallery: a rail with balusters.
+            var rail = Path()
+            rail.addRoundedRect(in: CGRect(x: -topHalf - R * 0.06, y: galleryY - R * 0.05, width: (topHalf + R * 0.06) * 2, height: R * 0.07), cornerSize: CGSize(width: R * 0.035, height: R * 0.035))
+            ctx.fill(rail, with: .color(body))
+            var bal = Path()
+            for k in [-0.7, -0.35, 0.35, 0.7] as [CGFloat] {
+                bal.move(to: CGPoint(x: topHalf * k, y: galleryY - R * 0.05))
+                bal.addLine(to: CGPoint(x: topHalf * k, y: galleryY - R * 0.14))
+            }
+            ctx.stroke(bal, with: .color(Self.slate.opacity(0.5)), style: StrokeStyle(lineWidth: max(0.8, R * 0.025), lineCap: .round))
         }
-        rim.stroke(ray, with: .color(Self.amber.opacity(Double(bright))),
-                   style: StrokeStyle(lineWidth: max(1, R * 0.11), lineCap: .round, lineJoin: .round))
-        rim.stroke(ray, with: .color(Color.white.opacity(Double(bright) * 0.5)),
-                   style: StrokeStyle(lineWidth: max(0.5, R * 0.035), lineCap: .round, lineJoin: .round))
-        if m.lift > 0.8 {
-            // Finished: the ray splits into a small fan at the exit.
-            for k in [-1.0, 1.0] as [CGFloat] {
-                var f = Path(); f.move(to: bend); f.addLine(to: CGPoint(x: aim.x, y: aim.y + k * R * 0.3))
-                rim.stroke(f, with: .color(Self.amber.opacity(Double(bright) * 0.45)), style: StrokeStyle(lineWidth: max(1, R * 0.06), lineCap: .round))
+
+        // 4. Lantern room, dome, finial.
+        var lantern = Path()
+        lantern.addRoundedRect(in: CGRect(x: -lanternHalf, y: lanternTop, width: lanternHalf * 2, height: galleryY - R * 0.05 - lanternTop), cornerSize: CGSize(width: R * 0.03, height: R * 0.03))
+        ctx.fill(lantern, with: .color(mini ? body : Self.slate.opacity(0.88)))
+        if !mini {
+            var glass = Path()
+            glass.addRect(CGRect(x: -lanternHalf + R * 0.02, y: lanternTop + R * 0.02, width: lanternHalf * 2 - R * 0.04, height: galleryY - R * 0.09 - lanternTop))
+            ctx.fill(glass, with: .color(Color.white.opacity(0.10)))
+            var mullions = Path()
+            for k in [-0.55, 0, 0.55] as [CGFloat] {
+                mullions.move(to: CGPoint(x: lanternHalf * k, y: lanternTop + R * 0.02))
+                mullions.addLine(to: CGPoint(x: lanternHalf * k, y: galleryY - R * 0.07))
+            }
+            ctx.stroke(mullions, with: .color(body.opacity(0.5)), style: StrokeStyle(lineWidth: max(0.6, R * 0.02)))
+        }
+        var dome = Path()
+        dome.move(to: CGPoint(x: -lanternHalf, y: lanternTop))
+        dome.addQuadCurve(to: CGPoint(x: lanternHalf, y: lanternTop), control: CGPoint(x: 0, y: lanternTop - R * 0.22))
+        dome.closeSubpath()
+        ctx.fill(dome, with: .color(body))
+        var finial = Path()
+        finial.addEllipse(in: CGRect(x: -R * 0.03, y: lanternTop - R * 0.16, width: R * 0.06, height: R * 0.06))
+        ctx.fill(finial, with: .color(mini ? body : Self.amber))
+
+        // 5. The lamp: glow, lamp, and the beam in front.
+        if !mini {
+            let glowR = R * 0.30
+            var glowA: Double
+            var lampColor = Self.warm
+            switch l.lamp {
+            case .lit:   glowA = Double(0.35 + 0.25 * breath) * max(0.5, Double(l.bright))
+            case .ember: glowA = Double(0.12 + 0.10 * breath); lampColor = Self.amber.opacity(0.7)
+            case .red:   let on = sin(now * 7) > 0; glowA = on ? 0.45 : 0.05; lampColor = on ? Self.red : Self.red.opacity(0.4)
+            case .off:   glowA = 0; lampColor = Self.slate
+            }
+            if glowA > 0.01 {
+                var glow = Path()
+                glow.addEllipse(in: CGRect(x: -glowR, y: lampY - glowR, width: glowR * 2, height: glowR * 2))
+                ctx.fill(glow, with: .radialGradient(Gradient(stops: [
+                    .init(color: (l.lamp == .red ? Self.red : Self.warm).opacity(glowA), location: 0),
+                    .init(color: Self.amber.opacity(glowA * 0.4), location: 0.45),
+                    .init(color: Self.amber.opacity(0), location: 1),
+                ]), center: CGPoint(x: 0, y: lampY), startRadius: 0, endRadius: glowR))
+            }
+            var lamp = Path()
+            lamp.addEllipse(in: CGRect(x: -R * 0.075, y: lampY - R * 0.075, width: R * 0.15, height: R * 0.15))
+            ctx.fill(lamp, with: .color(lampColor))
+            // Finished / happy: a ring around the lamp.
+            if engine.state == .finished || engine.eyeOverride == .happy {
+                var ring = Path()
+                ring.addEllipse(in: CGRect(x: -R * 0.26, y: lampY - R * 0.26, width: R * 0.52, height: R * 0.52))
+                ctx.stroke(ring, with: .color(Self.amber.opacity(0.7)), style: StrokeStyle(lineWidth: max(1, R * 0.045)))
             }
         }
+        if !behind { beam(into: &ctx) }
     }
 }
