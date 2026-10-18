@@ -73,6 +73,10 @@ enum DalilPontTests {
         verifier(DalilPontCommande.configMCP.contains("Bearer ${DALIL_JETON}"), "jeton par variable d'environnement")
         verifier(!args.joined().contains("secret"), "jeton absent des arguments")
 
+        let maison = FileManager.default.homeDirectoryForCurrentUser.resolvingSymlinksInPath().path
+        verifier(!DalilPont.dossierParDefaut.resolvingSymlinksInPath().path.hasPrefix(maison + "/"),
+                 "dossier de travail hors du dossier personnel (pas de CLAUDE.md remonté)")
+
         // 7. Le processus, avec un faux claude.
         let dossier = FileManager.default.temporaryDirectory.appendingPathComponent("dalil-pont-\(UUID().uuidString)")
         try? FileManager.default.createDirectory(at: dossier, withIntermediateDirectories: true)

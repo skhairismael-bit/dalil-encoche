@@ -40,10 +40,14 @@ final class DalilPont: @unchecked Sendable {
 
     private var conversation: Conversation?
 
+    /// Hors du dossier personnel : Claude Code remonte les dossiers parents jusqu'à
+    /// `~/.claude/CLAUDE.md` et le chargerait comme instructions de projet (vu le 18/10/2026,
+    /// la réponse reprenait les règles de l'utilisateur).
+    static let dossierParDefaut = FileManager.default.temporaryDirectory.appendingPathComponent("DalilPont")
+
     init(executable: @escaping @Sendable () -> String? = { ClaudeCLI.executable() },
          jeton: @escaping @Sendable () -> String? = { DalilPont.jetonDuTrousseau() },
-         dossier: URL = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
-            .appendingPathComponent("NotchBuddy/DalilPont"),
+         dossier: URL = DalilPont.dossierParDefaut,
          journal: URL = FileManager.default.homeDirectoryForCurrentUser
             .appendingPathComponent("Library/Logs/NotchBuddy/dalil-pont.log"),
          delai: TimeInterval = 120) {
