@@ -42,7 +42,7 @@ struct AskClaudeIntent: AppIntent {
         guard let session = link.sessions
             .filter({ $0.acceptsInstructions })
             .max(by: { $0.updatedAt < $1.updatedAt }) else {
-            return .result(dialog: "No Claude Code session takes instructions. Turn it on in Coucou's Settings on your Mac.")
+            return .result(dialog: "No Claude Code session takes instructions. Turn it on in Dalil's Settings on your Mac.")
         }
         guard await link.sendInstruction(text, pillId: session.id) else {
             return .result(dialog: "Couldn't reach iCloud. Nothing was sent.")

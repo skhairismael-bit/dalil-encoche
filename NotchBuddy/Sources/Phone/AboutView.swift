@@ -72,7 +72,7 @@ struct AboutView: View {
             } footer: {
                 Text(quietHours
                      ? "In the quiet hours, only what waits on you (a command to allow, a question) makes a sound. The rest arrives silently."
-                     : "Approvals and questions always notify you. Mochi's sounds are the ones he makes in your Mac's notch.")
+                     : "Approvals and questions always notify you. Dalil's sounds are the ones he makes in your Mac's notch.")
             }
 
             Section {
@@ -162,11 +162,11 @@ struct OnboardingView: View {
                         .font(.body)
                         .foregroundStyle(.secondary)
                 }
-                step(1, "Coucou on your Mac",
-                     "Install Coucou for Mac (Mac App Store or the website) and set up its Claude Code hooks.",
+                step(1, "Dalil on your Mac",
+                     "Install Dalil for Mac (Mac App Store or the website) and set up its Claude Code hooks.",
                      icon: "laptopcomputer")
                 step(2, "Turn on the iPhone switch",
-                     "On the Mac: Coucou Settings → General → iPhone → \"Show my agent sessions on my iPhone\".",
+                     "On the Mac: Dalil Settings → General → iPhone → \"Show my agent sessions on my iPhone\".",
                      icon: "switch.2")
                 step(3, "Same Apple Account",
                      "Sign in to iCloud with the same Apple Account on both. Your sessions go through your private iCloud, encrypted.",

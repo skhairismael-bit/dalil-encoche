@@ -134,8 +134,8 @@ targets:
     info:
       path: Resources/Info.plist
       properties:
-        CFBundleName: Coucou
-        CFBundleDisplayName: Coucou
+        CFBundleName: Dalil
+        CFBundleDisplayName: Dalil
         CFBundleIdentifier: fr.louisraille.NotchBuddy
         CFBundleVersion: "16"
         CFBundleShortVersionString: "0.4.0"
@@ -144,11 +144,11 @@ targets:
         NSHighResolutionCapable: YES
         NSSupportsAutomaticGraphicsSwitching: YES
         NSAppleEventsUsageDescription: "Pour sauter au terminal, envoyer des mails et piloter Musique et Spotify."
-        NSMicrophoneUsageDescription: "Coucou uses the microphone when you dictate, and to note your calls when you ask it to."
-        NSAudioCaptureUsageDescription: "Coucou records what your Mac plays only while you note a call, to write down what the other people say."
-        NSSpeechRecognitionUsageDescription: "Coucou turns your voice into the text of a chat message."
+        NSMicrophoneUsageDescription: "Dalil uses the microphone when you dictate, and to note your calls when you ask it to."
+        NSAudioCaptureUsageDescription: "Dalil records what your Mac plays only while you note a call, to write down what the other people say."
+        NSSpeechRecognitionUsageDescription: "Dalil turns your voice into the text of a chat message."
         NSAccessibilityUsageDescription: "Pour lire le titre de la fenêtre active et l'attacher comme contexte."
-        NSContactsUsageDescription: "Coucou looks up an email address when you ask it, by voice, to prepare an email."
+        NSContactsUsageDescription: "Dalil looks up an email address when you ask it, by voice, to prepare an email."
         NSAppTransportSecurity:
           NSAllowsLocalNetworking: true
         CFBundleLocalizations:
@@ -165,7 +165,7 @@ targets:
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: fr.louisraille.NotchBuddy
-        PRODUCT_NAME: Coucou
+        PRODUCT_NAME: Dalil
         INFOPLIST_FILE: Resources/Info.plist
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         MACOSX_DEPLOYMENT_TARGET: "15.0"
@@ -217,8 +217,8 @@ targets:
     info:
       path: Resources/InfoAppStore.plist
       properties:
-        CFBundleName: Coucou
-        CFBundleDisplayName: Coucou
+        CFBundleName: Dalil
+        CFBundleDisplayName: Dalil
         CFBundleIdentifier: fr.louisraille.Coucou
         CFBundleVersion: "6"
         CFBundleShortVersionString: "1.1"
@@ -244,7 +244,7 @@ targets:
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: fr.louisraille.Coucou
-        PRODUCT_NAME: Coucou
+        PRODUCT_NAME: Dalil
         INFOPLIST_FILE: Resources/InfoAppStore.plist
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         MACOSX_DEPLOYMENT_TARGET: "15.0"
@@ -292,8 +292,8 @@ targets:
     info:
       path: Resources/InfoPhone.plist
       properties:
-        CFBundleName: Coucou
-        CFBundleDisplayName: Coucou
+        CFBundleName: Dalil
+        CFBundleDisplayName: Dalil
         CFBundleIdentifier: fr.louisraille.Coucou
         CFBundleVersion: "3"
         CFBundleShortVersionString: "1.0"
@@ -309,9 +309,9 @@ targets:
           - UIInterfaceOrientationLandscapeLeft
           - UIInterfaceOrientationLandscapeRight
         ITSAppUsesNonExemptEncryption: NO
-        NSFaceIDUsageDescription: "Coucou asks for Face ID before allowing a command from your iPhone."
-        NSMicrophoneUsageDescription: "Coucou uses the microphone when you dictate an instruction for Claude Code."
-        NSSpeechRecognitionUsageDescription: "Coucou turns your voice into the text of an instruction for Claude Code."
+        NSFaceIDUsageDescription: "Dalil asks for Face ID before allowing a command from your iPhone."
+        NSMicrophoneUsageDescription: "Dalil uses the microphone when you dictate an instruction for Claude Code."
+        NSSpeechRecognitionUsageDescription: "Dalil turns your voice into the text of an instruction for Claude Code."
         NSSupportsLiveActivities: YES
         # Lets Mochi move at 120 Hz on ProMotion screens, like the Mac's notch.
         CADisableMinimumFrameDurationOnPhone: YES
@@ -328,7 +328,7 @@ targets:
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: fr.louisraille.Coucou
-        PRODUCT_NAME: Coucou
+        PRODUCT_NAME: Dalil
         INFOPLIST_FILE: Resources/InfoPhone.plist
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         # Mochi in other colors, picked in Settings (UIApplication.setAlternateIconName).
@@ -373,7 +373,7 @@ targets:
       path: Resources/InfoWidgets.plist
       properties:
         CFBundleName: CoucouWidgets
-        CFBundleDisplayName: Coucou
+        CFBundleDisplayName: Dalil
         CFBundleIdentifier: fr.louisraille.Coucou.Widgets
         CFBundleVersion: "3"
         CFBundleShortVersionString: "1.0"
@@ -416,7 +416,7 @@ targets:
       path: Resources/InfoNotificationContent.plist
       properties:
         CFBundleName: CoucouNotificationContent
-        CFBundleDisplayName: Coucou
+        CFBundleDisplayName: Dalil
         CFBundleIdentifier: fr.louisraille.Coucou.NotificationContent
         CFBundleVersion: "3"
         CFBundleShortVersionString: "1.0"

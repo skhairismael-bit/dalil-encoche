@@ -172,7 +172,7 @@ final class SystemAudioTap: @unchecked Sendable {
     func start(sink: @escaping @Sendable ([Float]) -> Void) throws {
         let description = CATapDescription(stereoGlobalTapButExcludeProcesses: [])
         description.uuid = UUID()
-        description.name = "Coucou Notetaker"
+        description.name = "Dalil Notetaker"
         description.isPrivate = true
         description.muteBehavior = .unmuted
 
@@ -195,7 +195,7 @@ final class SystemAudioTap: @unchecked Sendable {
 
         let outputUID = try Self.defaultOutputUID()
         let aggregate: [String: Any] = [
-            kAudioAggregateDeviceNameKey: "Coucou Notetaker",
+            kAudioAggregateDeviceNameKey: "Dalil Notetaker",
             kAudioAggregateDeviceUIDKey: UUID().uuidString,
             kAudioAggregateDeviceMainSubDeviceKey: outputUID,
             kAudioAggregateDeviceIsPrivateKey: true,

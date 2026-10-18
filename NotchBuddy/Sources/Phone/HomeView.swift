@@ -510,7 +510,7 @@ struct EmptySessionsView: View {
         switch status {
         case .starting: "Connecting to iCloud…"
         case .noAccount(let reason): "\(reason) Sign in to iCloud with the same account as your Mac."
-        case .zoneMissing: "Open Coucou on your Mac: your sessions will show up here."
+        case .zoneMissing: "Open Dalil on your Mac: your sessions will show up here."
         case .failed(let message): message
         case .ready: "No session yet. Start Claude Code, Cursor or Codex on your Mac."
         }

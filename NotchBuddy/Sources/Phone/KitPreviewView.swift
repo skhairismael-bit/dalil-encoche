@@ -16,7 +16,7 @@ struct KitPreviewView: View {
 
     private let sampleDiff = DiffEngine.fromEdit(
         old: "func greet() {\n    print(\"Hello\")\n}\n",
-        new: "func greet(name: String) {\n    print(\"Coucou \\(name)\")\n}\n",
+        new: "func greet(name: String) {\n    print(\"Dalil \\(name)\")\n}\n",
         path: "/coucou/Greeting.swift")
 
     var body: some View {

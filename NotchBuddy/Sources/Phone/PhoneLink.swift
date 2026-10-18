@@ -176,7 +176,7 @@ final class PhoneLink {
                                             options: [.firesOnRecordCreation])
         approvals.zoneID = Self.zoneID
         let alert = CKSubscription.NotificationInfo()
-        alert.title = "Coucou"
+        alert.title = "Dalil"
         alert.alertBody = "An agent is waiting for your OK"
         alert.soundName = mochi ? "approval.wav" : "default"
         alert.category = NotificationActions.approvalCategory

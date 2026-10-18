@@ -19,7 +19,7 @@ enum MochiChoice: String, AppEnum {
     case n8n = "integration_n8n"
     case notion = "integration_notion"
 
-    static let typeDisplayRepresentation: TypeDisplayRepresentation = "Mochi"
+    static let typeDisplayRepresentation: TypeDisplayRepresentation = "Dalil"
 
     static let caseDisplayRepresentations: [MochiChoice: DisplayRepresentation] = [
         .automatic: "Automatic",

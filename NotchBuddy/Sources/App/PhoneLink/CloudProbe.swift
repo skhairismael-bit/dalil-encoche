@@ -138,7 +138,7 @@ final class CloudProbe {
                 return false
             }
             _ = try await database.modifyRecordZones(saving: [CKRecordZone(zoneID: Self.zoneID)], deleting: [])
-            log("zone Coucou ready")
+            log("zone Dalil ready")
 
             let sub = CKDatabaseSubscription(subscriptionID: Self.subscriptionID)
             let info = CKSubscription.NotificationInfo()
@@ -212,7 +212,7 @@ final class CloudProbe {
         } catch let error as CKError where error.code == .changeTokenExpired {
             changeToken = nil
         } catch let error as CKError where error.code == .zoneNotFound {
-            log("zone Coucou missing, recreating")
+            log("zone Dalil missing, recreating")
             ready = false
         } catch {
             log("fetch (\(source)) failed: \(error.localizedDescription)")

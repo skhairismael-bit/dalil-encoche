@@ -16,17 +16,17 @@ set -euo pipefail
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 BUNDLE_ID="fr.louisraille.NotchBuddy"
 DERIVED="${HOME}/Library/Developer/Xcode/DerivedData/CoucouDev"
-BUILT="${DERIVED}/Build/Products/DebugCloud/Coucou.app"
+BUILT="${DERIVED}/Build/Products/DebugCloud/Dalil.app"
 LSREGISTER="/System/Library/Frameworks/CoreServices.framework/Versions/Current/Frameworks/LaunchServices.framework/Versions/Current/Support/lsregister"
 
 # The App Store Coucou (fr.louisraille.Coucou) has the same file name: never overwrite it.
-TARGET="/Applications/Coucou.app"
+TARGET="/Applications/Dalil.app"
 if [ -d "${TARGET}" ]; then
   EXISTING=$(/usr/libexec/PlistBuddy -c "Print :CFBundleIdentifier" "${TARGET}/Contents/Info.plist" 2>/dev/null || echo "")
   if [ "${EXISTING}" != "${BUNDLE_ID}" ]; then
     mkdir -p "${HOME}/Applications"
-    TARGET="${HOME}/Applications/Coucou.app"
-    echo "/Applications/Coucou.app is another Coucou (${EXISTING}): installing in ~/Applications instead."
+    TARGET="${HOME}/Applications/Dalil.app"
+    echo "/Applications/Dalil.app is another Dalil (${EXISTING}): installing in ~/Applications instead."
   fi
 fi
 
@@ -36,10 +36,10 @@ xcodegen >/dev/null
 xcodebuild -scheme NotchBuddyCloud -configuration DebugCloud -allowProvisioningUpdates \
   -derivedDataPath "${DERIVED}" -quiet build
 
-echo "Quitting Coucou..."
+echo "Quitting Dalil..."
 osascript -e "tell application id \"${BUNDLE_ID}\" to quit" >/dev/null 2>&1 || true
-for _ in 1 2 3 4 5; do pgrep -x Coucou >/dev/null || break; sleep 1; done
-pkill -x Coucou 2>/dev/null || true
+for _ in 1 2 3 4 5; do pgrep -x Dalil >/dev/null || break; sleep 1; done
+pkill -x Dalil 2>/dev/null || true
 
 echo "Installing in ${TARGET}..."
 rm -rf "${TARGET}"
@@ -48,7 +48,7 @@ ditto "${BUILT}" "${TARGET}"
 # The build stays in DerivedData for the next (incremental) build, but macOS must not
 # count it as another Coucou. Copies from Xcode's own builds (▶, xcodebuild by hand) go.
 "${LSREGISTER}" -u "${BUILT}" >/dev/null 2>&1 || true
-for old in "${HOME}"/Library/Developer/Xcode/DerivedData/NotchBuddy-*/Build/Products/*/Coucou.app; do
+for old in "${HOME}"/Library/Developer/Xcode/DerivedData/NotchBuddy-*/Build/Products/*/Dalil.app; do
   [ -d "$old" ] || continue
   "${LSREGISTER}" -u "$old" >/dev/null 2>&1 || true
   rm -rf "$old"
@@ -57,4 +57,4 @@ done
 "${LSREGISTER}" -f "${TARGET}" >/dev/null 2>&1 || true
 
 open "${TARGET}"
-echo "Coucou is running from ${TARGET}."
+echo "Dalil is running from ${TARGET}."
