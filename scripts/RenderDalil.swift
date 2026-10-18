@@ -72,29 +72,40 @@ struct EngineCell: View {
 }
 
 private let states: [(String, BotState)] = [
-    ("repos", .idle), ("travaille", .working), ("réfléchit", .thinking), ("approbation", .approval),
-    ("question", .question), ("fini", .finished), ("erreur", .error), ("dort", .sleeping),
+    ("repos", .idle), ("travaille", .working), ("réfléchit", .thinking), ("cherche", .searching),
+    ("approbation", .approval), ("question", .question), ("fini", .finished), ("erreur", .error),
+    ("limite", .ratelimit), ("dort", .sleeping), ("étourdi", .dizzy),
 ]
 
 struct Planche: View {
     let look: DalilLook
+    func row(_ size: CGFloat, label: String) -> some View {
+        HStack(spacing: 8) {
+            Text(label).font(.system(size: 10)).foregroundColor(.gray).frame(width: 110, alignment: .trailing)
+            ForEach(states.indices, id: \.self) { i in
+                EngineCell(engine: settledEngine(state: states[i].1, seconds: 1.4), size: size)
+                    .frame(width: 112, alignment: .center)
+            }
+        }
+    }
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             Text("Dalil — \(look.rawValue)").font(.system(size: 16, weight: .semibold)).foregroundColor(.white)
             HStack(spacing: 8) {
+                Spacer().frame(width: 110)
                 ForEach(states.indices, id: \.self) { i in
-                    VStack(spacing: 4) {
-                        EngineCell(engine: settledEngine(state: states[i].1, seconds: 1.4), size: 150)
-                        Text(states[i].0).font(.system(size: 10)).foregroundColor(.gray)
-                    }
+                    Text(states[i].0).font(.system(size: 10)).foregroundColor(.gray).frame(width: 112)
                 }
             }
+            row(112, label: "île ouverte (58 pt ×2)")
+            row(58, label: "île ouverte (58 pt)")
+            row(20, label: "encoche fermée (20 pt)")
             HStack(spacing: 8) {
-                Text("mini (pastilles)").font(.system(size: 10)).foregroundColor(.gray).frame(width: 90, alignment: .trailing)
-                ForEach(["#D97757", "#4285F4", "#22C55E", "#A855F7"], id: \.self) { hex in
+                Text("mini sur pastille (16 pt)").font(.system(size: 10)).foregroundColor(.gray).frame(width: 110, alignment: .trailing)
+                ForEach(["#D97757", "#4285F4", "#22C55E", "#A855F7", "#E5E7EB"], id: \.self) { hex in
                     EngineCell(engine: settledEngine(state: .idle, seconds: 0.4, mini: true,
-                                                     miniColor: CGColor(red: 1, green: 1, blue: 1, alpha: 1)), size: 40)
-                        .background(Color(hex: hex)).cornerRadius(8)
+                                                     miniColor: CGColor(red: 1, green: 1, blue: 1, alpha: 1)), size: 16)
+                        .padding(4).background(Color(hex: hex)).cornerRadius(7)
                 }
                 Spacer()
             }
@@ -133,7 +144,7 @@ struct Main {
                 if abs(t - 2.6) < dt / 2 { e.setState(.working) }
                 e.update(dt: dt)
                 if Int(round(t / dt)) % 5 == 0 {
-                    let cell = EngineCell(engine: e, size: 150).background(Color(red: 0.07, green: 0.07, blue: 0.08))
+                    let cell = EngineCell(engine: e, size: 116).background(Color(red: 0.07, green: 0.07, blue: 0.08))
                     savePNG(cell, to: String(format: "%@/%@-f%03d.png", dir, look.rawValue, frame), scale: 1)
                     frame += 1
                 }

@@ -1126,6 +1126,13 @@ final class BotEngine: ObservableObject {
         if tilt != 0 { ctx.rotate(by: .radians(tilt)) }
         ctx.scaleBy(x: sx, y: sy)
 
+        // A figure of its own (lantern, bird…): the look draws everything from the
+        // engine's state. The upload mailbox (morph) keeps the box drawing below.
+        if DalilLook.current.ownsDrawing && morph < 0.05 {
+            DalilLook.current.drawFigure(engine: self, ctx: &ctx, R: R)
+            return
+        }
+
         // Body path (superellipse for Mochi, morph to rect for upload)
         let bodyPath = mochiPath(rx: rx, ry: ry, morph: morph, R: R)
 
@@ -1205,6 +1212,7 @@ final class BotEngine: ObservableObject {
     // MARK: - Draw hands behind body (called before draw() so hands appear under Mochi)
 
     func drawHandsBehind(context: GraphicsContext, size: CGSize) {
+        guard !DalilLook.current.ownsDrawing else { return }   // Mochi's hands and outfits
         guard hands > 0.01, !isMini else { return }
         let W = size.width, H = size.height
         let R = W * 0.3
@@ -1329,6 +1337,7 @@ final class BotEngine: ObservableObject {
     }
 
     func drawOutfitBehind(context: GraphicsContext, size: CGSize) {
+        guard !DalilLook.current.ownsDrawing else { return }   // Mochi's hands and outfits
         guard outfit != .none, !isMini else { return }
         let W = size.width, H = size.height, R = W * 0.3
         let cx = W / 2 + ox * R
@@ -1343,6 +1352,7 @@ final class BotEngine: ObservableObject {
     }
 
     func drawOutfitFront(context: GraphicsContext, size: CGSize) {
+        guard !DalilLook.current.ownsDrawing else { return }   // Mochi's hands and outfits
         guard outfit != .none, !isMini else { return }
         let W = size.width, H = size.height, R = W * 0.3
         let cx = W / 2 + ox * R
