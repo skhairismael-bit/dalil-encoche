@@ -145,6 +145,9 @@ final class AppState: ObservableObject {
     @Published var moonshotChatModel: String = ChatProvider.moonshot.defaultModel {
         didSet { UserDefaults.standard.set(moonshotChatModel, forKey: "moonshotChatModel") }
     }
+    @Published var claudeCodeChatModel: String = ChatProvider.claudeCode.defaultModel {
+        didSet { UserDefaults.standard.set(claudeCodeChatModel, forKey: "claudeCodeChatModel") }
+    }
     @Published var ollamaServerURL: String = "" {
         didSet { UserDefaults.standard.set(ollamaServerURL, forKey: "ollamaServerURL") }
     }
@@ -167,6 +170,11 @@ final class AppState: ObservableObject {
     func fetchModelsIfNeeded(for provider: ChatProvider) {
         guard !loadingProviderModels.contains(provider),
               fetchedProviderModels[provider] == nil else { return }
+        // Claude Code: its model aliases, nothing to fetch and no key.
+        if provider == .claudeCode {
+            fetchedProviderModels[provider] = DalilPontCommande.modeles
+            return
+        }
         // Local providers: fetch from server URL (no API key needed)
         if provider.isLocal {
             let baseURL = provider == .ollama ? ollamaServerURL : lmstudioServerURL
@@ -217,7 +225,7 @@ final class AppState: ObservableObject {
             case .deepseek:  models = await ClaudeService.fetchOpenAICompatibleModels(baseURL: "https://api.deepseek.com/v1", apiKey: apiKey)
             case .qwen:      models = await ClaudeService.fetchOpenAICompatibleModels(baseURL: "https://dashscope.aliyuncs.com/compatible-mode/v1", apiKey: apiKey)
             case .moonshot:  models = await ClaudeService.fetchOpenAICompatibleModels(baseURL: "https://api.moonshot.cn/v1", apiKey: apiKey)
-            case .ollama, .lmstudio: models = []  // handled above
+            case .ollama, .lmstudio, .claudeCode: models = []  // handled above
             }
             loadingProviderModels.remove(provider)
             if models.isEmpty {
@@ -249,7 +257,7 @@ final class AppState: ObservableObject {
                     if !models.contains(where: { $0.id == moonshotChatModel }) {
                         moonshotChatModel = models.first!.id
                     }
-                case .ollama, .lmstudio: break
+                case .ollama, .lmstudio, .claudeCode: break
                 }
             }
         }
@@ -266,6 +274,7 @@ final class AppState: ObservableObject {
         case .deepseek:  return deepseekChatModel
         case .qwen:      return qwenChatModel
         case .moonshot:  return moonshotChatModel
+        case .claudeCode: return claudeCodeChatModel
         }
     }
 
@@ -527,6 +536,9 @@ final class AppState: ObservableObject {
         if let v = ud.string(forKey: "claudeModel"),
            !v.trimmingCharacters(in: .whitespaces).isEmpty { claudeModel = v }
         if let v = ud.string(forKey: "chatProvider"), let p = ChatProvider(rawValue: v) { chatProvider = p }
+        #if APPSTORE
+        if chatProvider == .claudeCode { chatProvider = .anthropic }
+        #endif
         if let v = ud.string(forKey: "googleChatModel"), !v.isEmpty { googleChatModel = v }
         if let v = ud.string(forKey: "openAIChatModel"), !v.isEmpty { openAIChatModel = v }
         if let v = ud.string(forKey: "ollamaChatModel"), !v.isEmpty { ollamaChatModel = v }
@@ -534,6 +546,7 @@ final class AppState: ObservableObject {
         if let v = ud.string(forKey: "deepseekChatModel"), !v.isEmpty { deepseekChatModel = v }
         if let v = ud.string(forKey: "qwenChatModel"),     !v.isEmpty { qwenChatModel     = v }
         if let v = ud.string(forKey: "moonshotChatModel"), !v.isEmpty { moonshotChatModel = v }
+        if let v = ud.string(forKey: "claudeCodeChatModel"), !v.isEmpty { claudeCodeChatModel = v }
         if let v = ud.string(forKey: "ollamaServerURL"), !v.isEmpty { ollamaServerURL = v }
         if let v = ud.string(forKey: "lmstudioServerURL"), !v.isEmpty { lmstudioServerURL = v }
         // Migrate old 60s default → 15s

@@ -92,6 +92,9 @@ jobs:
       - name: Test chat parsing
         run: bash scripts/test-chat-parsing.sh
 
+      - name: Dalil bridge tests
+        run: bash scripts/test-dalil-pont.sh
+
       - name: Test plan gauge
         run: bash scripts/test-plan-gauge.sh
 

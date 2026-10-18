@@ -145,9 +145,7 @@ final class InstructionRunner {
         process.arguments = ["-p", text, "--resume", sessionId]
         process.currentDirectoryURL = URL(fileURLWithPath: cwd)
         var env = ProcessInfo.processInfo.environment
-        let home = FileManager.default.homeDirectoryForCurrentUser.path
-        env["PATH"] = [URL(fileURLWithPath: claude).deletingLastPathComponent().path, "/opt/homebrew/bin", "/usr/local/bin",
-                       "/usr/bin", "/bin", "/usr/sbin", "/sbin", "\(home)/.local/bin", env["PATH"] ?? ""].joined(separator: ":")
+        env["PATH"] = ClaudeCLI.path(for: claude, inherited: env["PATH"])
         // The hooks route events by editor: keep them on the same pill.
         if pillId == "agent_cursor" {
             env["__CFBundleIdentifier"] = "com.todesktop.230313mzl4w4u92"
@@ -185,19 +183,7 @@ final class InstructionRunner {
         }
     }
 
-    /// Where `claude` usually lives; the app doesn't get the shell's PATH.
-    static func claudeExecutable() -> String? {
-        let home = FileManager.default.homeDirectoryForCurrentUser.path
-        let candidates = [
-            "\(home)/.claude/local/claude",
-            "\(home)/.local/bin/claude",
-            "/opt/homebrew/bin/claude",
-            "/usr/local/bin/claude",
-            "\(home)/.npm-global/bin/claude",
-            "\(home)/.bun/bin/claude",
-        ]
-        return candidates.first { FileManager.default.isExecutableFile(atPath: $0) }
-    }
+    static func claudeExecutable() -> String? { ClaudeCLI.executable() }
 
     private func log(_ message: String) {
         CloudProbe.shared.log("[instruction] \(message)")

@@ -213,6 +213,11 @@ final class ClaudeService {
 
     func clearConversation() {
         conversationMessages = []
+        #if !APPSTORE
+        DalilPont.shared.fermer(conversation: claudeCodeConversation)
+        claudeCodeConversation = UUID()
+        claudeCodeTurns = 0
+        #endif
     }
 
     /// Resolved once: NSFullUserName() is a system call, and the name cannot change under us
@@ -248,6 +253,12 @@ final class ClaudeService {
             state.stateOverride = nil
             return
         }
+        #if !APPSTORE
+        if state.chatProvider == .claudeCode {
+            await chatClaudeCode(query: query, context: context, state: state)
+            return
+        }
+        #endif
         guard state.chatProvider == .anthropic else {
             await chatOpenAICompatible(query: query, context: context, state: state)
             return
@@ -295,6 +306,99 @@ final class ClaudeService {
         }
     }
 
+    #if !APPSTORE
+    // MARK: - Claude Code chat (Dalil's bridge)
+
+    /// The Claude Code conversation behind the chat; a new one on "new conversation".
+    private var claudeCodeConversation = UUID()
+    private var claudeCodeTurns = 0
+
+    private let claudeCodePrompt: String = {
+        let opening = if let firstName = resolveUserFirstName() {
+            "You are Dalil, \(firstName)'s assistant embedded in the notch of their Mac."
+        } else {
+            "You are Dalil, an assistant embedded in the notch of the user's Mac."
+        }
+        return """
+        \(opening) \
+        You answer through Claude Code with read-only access to Annour, the user's company app, through the dalil tools. \
+        You have no web access and no access to files on this Mac: say so when a question needs them. \
+        Respond in the user's language. Be short and concrete. \
+        Use light Markdown when it helps: short paragraphs, bullet lists, **bold**. Avoid tables and big headings: the chat window is small.
+        """
+    }()
+
+    func chatClaudeCode(query: String, context: PromptContext?, state: AppState) async {
+        var text = query
+        if claudeCodeTurns == 0, let ctx = context {
+            switch ctx {
+            case .window(let app, let title, let url):
+                var prefix = "Context — App: \(app), Window: \(title)"
+                if let u = url { prefix += ", URL: \(u)" }
+                text = prefix + "\n\n" + query
+            case .file(let name, let fileURL):
+                // The app reads the file itself: Claude Code gets no access to the disk.
+                if let fileURL, let content = readTextFile(fileURL) {
+                    text = "File: \(name)\n\n\(content)\n\n" + query
+                } else {
+                    text = "File: \(name)\n\n" + query
+                }
+            }
+        }
+        claudeCodeTurns += 1
+
+        let placeholder = ChatMessage(role: .assistant, content: "")
+        let msgId = placeholder.id
+        state.chatHistory.append(placeholder)
+        state.stateOverride = .thinking
+        let conversation = claudeCodeConversation
+        var final: String?
+        var failure: String?
+        let events = DalilPont.shared.question(text, conversation: conversation,
+                                               modele: state.activeChatModel, consigne: claudeCodePrompt)
+        for await event in events where conversation == claudeCodeConversation {
+            switch event {
+            case .texte(let visible):
+                if state.stateOverride == .thinking { state.stateOverride = nil }
+                if let idx = state.chatHistory.firstIndex(where: { $0.id == msgId }) {
+                    state.chatHistory[idx].content = visible
+                }
+            case .fin(let answer): final = answer
+            case .erreur(let message): failure = message
+            }
+        }
+        // Closed meanwhile ("new conversation"): nothing to show, not an error.
+        guard conversation == claudeCodeConversation else { return }
+        if let final {
+            if let idx = state.chatHistory.firstIndex(where: { $0.id == msgId }) {
+                state.chatHistory[idx].content = final
+            }
+            state.stateOverride = nil
+            state.view = .prompt
+            NotificationCenter.default.post(name: .triggerEmote, object: BotEmote.happy)
+            return
+        }
+        state.chatHistory.removeAll { $0.id == msgId }
+        state.stateOverride = nil
+        guard let failure else { return }
+        if failure != DalilPont.occupe {
+            // The bridge closed this conversation: the next question starts a new one.
+            claudeCodeConversation = UUID()
+            claudeCodeTurns = 0
+        }
+        await showError(failure, state: state)
+    }
+
+    /// A text file the user dropped, read by the app (at most 200 KB, like the Anthropic chat).
+    private func readTextFile(_ url: URL) -> String? {
+        let binary = ["pdf", "jpg", "jpeg", "png", "gif", "webp"]
+        guard !binary.contains(url.pathExtension.lowercased()),
+              let data = try? Data(contentsOf: url), data.count <= 200_000,
+              let text = String(data: data, encoding: .utf8), !text.isEmpty else { return nil }
+        return text
+    }
+    #endif
+
     // MARK: - OpenAI-compatible chat (Google Gemini / OpenAI / Ollama / LM Studio)
 
     func chatOpenAICompatible(query: String, context: PromptContext?, state: AppState) async {
@@ -313,7 +417,7 @@ final class ClaudeService {
             case .deepseek:  baseURL = "https://api.deepseek.com/v1"
             case .qwen:      baseURL = "https://dashscope.aliyuncs.com/compatible-mode/v1"
             case .moonshot:  baseURL = "https://api.moonshot.cn/v1"
-            case .anthropic, .ollama, .lmstudio: baseURL = ""
+            case .anthropic, .ollama, .lmstudio, .claudeCode: baseURL = ""
             }
         }
 
