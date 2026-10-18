@@ -82,7 +82,21 @@ enum IslandAutoCloseTests {
         heldCountdown.mouseLeft()
         try await waitForCompact(heldCountdown, )
 
-        print("Island auto-close: 8 cases passed")
+        // Dalil : un signal (enveloppes non vues) garde « petit » visible, puis il se cache une fois vu.
+        let signal = IslandStateMachine()
+        signal.petitToHiddenDelay = 0.05
+        var nonVues = true
+        signal.garderPetit = { nonVues }
+        signal.mouseEntered()
+        signal.mouseLeft()
+        precondition(signal.state == .petit)
+        try await Task.sleep(for: .milliseconds(200))
+        precondition(signal.state == .petit)
+        nonVues = false
+        try await Task.sleep(for: .milliseconds(200))
+        precondition(signal.state == .hidden)
+
+        print("Island auto-close: 9 cases passed")
     }
 
     @MainActor

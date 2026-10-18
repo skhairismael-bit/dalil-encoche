@@ -63,7 +63,7 @@ struct ApprovalInfo: Sendable {
 
 // MARK: - Pill badge (shown on pill edge when non-focused task has an alert)
 
-enum PillBadge { case approval, finished, error }
+enum PillBadge { case approval, finished, error, nouveautes }  // nouveautes : enveloppes de Dalil non vues
 
 // MARK: - Agent Task
 

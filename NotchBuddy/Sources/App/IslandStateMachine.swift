@@ -29,6 +29,8 @@ final class IslandStateMachine {
             scheduleHomeCollapse()
         }
     }
+    /// Un signal à montrer (enveloppes de Dalil non vues) : petit ne se cache pas, il réessaie plus tard.
+    var garderPetit: (() -> Bool)?
     /// petit → hidden delay (seconds). Override for debug.
     var petitToHiddenDelay: TimeInterval = 60
     /// coucou → petit delay after greeting animation ends (no hover). ~0.6s syncs with canvas collapse.
@@ -207,6 +209,7 @@ final class IslandStateMachine {
         petitHideWork?.cancel()
         let item = DispatchWorkItem { [weak self] in
             guard let self, self.state == .petit, !(self.isHeldOpen?() ?? false) else { return }
+            if self.garderPetit?() == true { self.schedulePetitHide(); return }
             self.transition(to: .hidden)
         }
         petitHideWork = item

@@ -105,6 +105,14 @@ struct OverviewView: View {
                             .padding(.leading, 108)
                             .padding(.trailing, 36)
 
+                            if agent.id == DalilEnveloppesStore.pillId,
+                               agent.state != .thinking, agent.state != .working {
+                                DalilEnveloppesView(store: DalilEnveloppesStore.shared)
+                                    .frame(height: 44)
+                                    .padding(.top, 6)
+                                    .padding(.leading, 108)
+                                    .padding(.trailing, 12)
+                            } else {
                             TickerView(task: agent, onDiffTap: { diffIdx in
                                 withAnimation(.easeIn(duration: 0.16)) { activeDiffId = diffIdx }
                             })
@@ -112,6 +120,7 @@ struct OverviewView: View {
                                 .padding(.top, 6)
                                 .padding(.leading, 108)
                                 .padding(.trailing, 12)
+                            }
                         }
                         .frame(maxWidth: .infinity, alignment: .topLeading)
                         .padding(.top, 4)
@@ -4076,6 +4085,8 @@ struct AgentPillsView: View {
                         MusicPill(task: task, state: state, swapping: $swapping) {
                             swapping = true
                             state.setFocus(task.id)
+                        DalilEnveloppesStore.acquitter(pill: task.id)
+                            DalilEnveloppesStore.acquitter(pill: task.id)
                             SoundEngine.shared.play("blip")
                             DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { swapping = false }
                         }
@@ -4083,6 +4094,8 @@ struct AgentPillsView: View {
                         SpotifyPill(task: task, swapping: $swapping) {
                             swapping = true
                             state.setFocus(task.id)
+                        DalilEnveloppesStore.acquitter(pill: task.id)
+                            DalilEnveloppesStore.acquitter(pill: task.id)
                             SoundEngine.shared.play("blip")
                             DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { swapping = false }
                         }
@@ -4090,6 +4103,8 @@ struct AgentPillsView: View {
                         AgentPill(task: task, state: state, swapping: $swapping) {
                             swapping = true
                             state.setFocus(task.id)
+                        DalilEnveloppesStore.acquitter(pill: task.id)
+                            DalilEnveloppesStore.acquitter(pill: task.id)
                             SoundEngine.shared.play("blip")
                             DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { swapping = false }
                         }
@@ -4098,6 +4113,7 @@ struct AgentPillsView: View {
                     AgentPill(task: task, state: state, swapping: $swapping) {
                         swapping = true
                         state.setFocus(task.id)
+                        DalilEnveloppesStore.acquitter(pill: task.id)
                         SoundEngine.shared.play("blip")
                         DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { swapping = false }
                     }
@@ -4384,6 +4400,7 @@ struct PillBadgeView: View {
         case .approval: return Color(hex: "#F5A524")
         case .finished: return Color(hex: "#22C55E")
         case .error:    return Color(hex: "#F4505E")
+        case .nouveautes: return Color(hex: "#F2B84B")  // ambre de la lanterne du phare
         }
     }
 
@@ -4392,6 +4409,7 @@ struct PillBadgeView: View {
         case .approval: return "exclamationmark"
         case .finished: return "checkmark"
         case .error:    return "xmark"
+        case .nouveautes: return "bell.fill"
         }
     }
 
@@ -5144,5 +5162,53 @@ extension Color {
             green: min(1, Double(components.greenComponent) + amount),
             blue: min(1, Double(components.blueComponent) + amount)
         )
+    }
+}
+
+
+// MARK: - Dalil : les enveloppes d'Annour (pastille persistante)
+
+/// La liste des enveloppes poussées par le démon d'Annour, récentes en haut, texte et heure.
+/// L'apparition de la vue vaut « vu » pour la pastille, et rien d'autre.
+struct DalilEnveloppesView: View {
+    @ObservedObject var store: DalilEnveloppesStore
+
+    var body: some View {
+        Group {
+            if store.enveloppes.isEmpty {
+                Text("Rien de neuf dans Annour")
+                    .font(.system(size: 12))
+                    .foregroundColor(Color(hex: "#8E939C"))
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+            } else {
+                ScrollView(.vertical, showsIndicators: false) {
+                    VStack(alignment: .leading, spacing: 3) {
+                        if store.nonVues > 0 {
+                            Button {
+                                DalilEnveloppesStore.acquitter(pill: DalilEnveloppesStore.pillId)
+                            } label: {
+                                Text(store.nonVues > 1 ? "\(store.nonVues) non vues · marquer vues" : "1 non vue · marquer vue")
+                                    .font(.system(size: 11, weight: .semibold))
+                                    .foregroundColor(Color(hex: "#F2B84B"))
+                            }
+                            .buttonStyle(.plain)
+                        }
+                        ForEach(Array(store.enveloppes.enumerated()), id: \.offset) { i, e in
+                            HStack(alignment: .top, spacing: 6) {
+                                Text(DalilBoite.heure(e.recue))
+                                    .font(.system(size: 11, weight: .medium).monospacedDigit())
+                                    .foregroundColor(Color(hex: "#F2B84B"))
+                                    .fixedSize()
+                                Text(e.texte)
+                                    .font(.system(size: 12, weight: i == 0 ? .semibold : .regular))
+                                    .foregroundColor(Color(hex: e.vue ? "#B8BCC4" : "#F5F6F8"))
+                                    .lineLimit(1)
+                                    .truncationMode(.tail)
+                            }
+                        }
+                    }
+                }
+            }
+        }
     }
 }

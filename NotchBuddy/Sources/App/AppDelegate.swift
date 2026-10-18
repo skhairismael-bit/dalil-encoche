@@ -263,6 +263,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         islandController?.showWindow(nil)
         islandController?.fsm.launch()
         HookServer.shared.start()
+        HookServer.shared.restaurerPastilleDalil()
         #if !APPSTORE
         _ = VoiceEngine.shared  // registers system observers; starts mic only if the user enabled voice
         FlowDictation.shared.start()  // watches the dictation key only if Flow dictation is on

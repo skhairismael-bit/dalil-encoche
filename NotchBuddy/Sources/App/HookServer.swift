@@ -471,6 +471,8 @@ final class HookServer: @unchecked Sendable {
         }
 
         let focused = state.focusId == agentId
+        // Dalil (démon d'Annour) : un indicateur passif — ni récapitulatif, ni son, ni ouverture de l'île.
+        let dalil = agentId == DalilEnveloppesStore.pillId
         // Several sessions can share one pill (it is chosen from the client, not from the
         // session). The registry tells a turn-ending event whether it may touch the pill,
         // and which session owns the project name shown on it.
@@ -518,9 +520,11 @@ final class HookServer: @unchecked Sendable {
                        externalAgent: isExternalAgent ? validAgent : nil)
             if let idx = state.tasks.firstIndex(where: { $0.id == agentId }) { state.tasks[idx].finalLine = nil }
             nbLog("SessionStart \(isExternalAgent ? agentId : projectName) (\(sessionId.prefix(8)))")
-            NotificationCenter.default.post(name: .checkMondayRecap, object: nil)
-            if state.isPresent { expandIfNeeded(to: .overview) }
-            SoundEngine.shared.play("work")
+            if !dalil {
+                NotificationCenter.default.post(name: .checkMondayRecap, object: nil)
+                if state.isPresent { expandIfNeeded(to: .overview) }
+                SoundEngine.shared.play("work")
+            }
             if agentId == "agent_hermes", let platform = payload["platform"] as? String,
                !platform.isEmpty, platform != "cli" {
                 let capitalized = platform.prefix(1).uppercased() + platform.dropFirst()
@@ -535,10 +539,14 @@ final class HookServer: @unchecked Sendable {
             state.updateTask(id: agentId, state: .thinking)
             if let prompt = payload["prompt"] as? String, !prompt.isEmpty {
                 appendStep(id: agentId, step: String(prompt.prefix(60)))
+                // Dalil : l'enveloppe reste lisible dans l'île après la salve (pastille persistante).
+                if agentId == DalilEnveloppesStore.pillId { DalilEnveloppesStore.shared.ajouter(prompt) }
             }
-            RecapStore.shared.userPromptSubmit(sessionId: recapSessionId, pillId: agentId, project: projectName)
-            NotificationCenter.default.post(name: .checkMondayRecap, object: nil)
-            if state.isPresent { expandIfNeeded(to: .overview) }
+            if !dalil {
+                RecapStore.shared.userPromptSubmit(sessionId: recapSessionId, pillId: agentId, project: projectName)
+                NotificationCenter.default.post(name: .checkMondayRecap, object: nil)
+                if state.isPresent { expandIfNeeded(to: .overview) }
+            }
 
         case "PreToolUse":
             activeSessionId = sessionId
@@ -593,7 +601,7 @@ final class HookServer: @unchecked Sendable {
             let finalText = DiffEngine.toOneLine(rawFinal)
             // The step log is shared, so the conclusion is worth showing either way.
             if !finalText.isEmpty { appendStep(id: agentId, step: finalText) }
-            RecapStore.shared.stop(sessionId: recapSessionId)
+            if !dalil { RecapStore.shared.stop(sessionId: recapSessionId) }
             // Another session is still mid-turn behind this pill: the finished state, the
             // sound and the idle reset below would land on its work. Its own Stop comes later.
             guard scope == .pill else {
@@ -604,16 +612,24 @@ final class HookServer: @unchecked Sendable {
             if !finalText.isEmpty, let idx = state.tasks.firstIndex(where: { $0.id == agentId }) {
                 state.tasks[idx].finalLine = finalText
             }
-            SoundEngine.shared.play("finish")
-            if focused {
-                expandIfNeeded(to: .finished)
+            if dalil {
+                rafraichirBadgeDalil()
             } else {
-                setPillBadge(id: agentId, badge: .finished)
+                SoundEngine.shared.play("finish")
+                if focused {
+                    expandIfNeeded(to: .finished)
+                } else {
+                    setPillBadge(id: agentId, badge: .finished)
+                }
             }
             DispatchQueue.main.asyncAfter(deadline: .now() + 5.2) {
                 // A session (this one or a sibling) may have started a new turn meanwhile.
                 guard self.sessions.workingCount(pill: agentId) == 0 else { return }
-                if isExternalAgent {
+                if dalil {
+                    // La pastille de Dalil ne part jamais : au repos, un point tant qu'une enveloppe n'est pas vue.
+                    AppState.shared.updateTask(id: agentId, state: .idle)
+                    self.rafraichirBadgeDalil()
+                } else if isExternalAgent {
                     AppState.shared.removeTask(id: agentId)
                 } else {
                     AppState.shared.updateTask(id: agentId, state: .idle)
@@ -1108,6 +1124,22 @@ final class HookServer: @unchecked Sendable {
         let state = AppState.shared
         guard let idx = state.tasks.firstIndex(where: { $0.id == id }) else { return }
         state.tasks[idx].pillBadge = badge
+    }
+
+    /// Le point de la pastille dalil suit le compte des enveloppes non vues.
+    @MainActor
+    func rafraichirBadgeDalil() {
+        let id = DalilEnveloppesStore.pillId
+        if DalilEnveloppesStore.shared.nonVues > 0 { setPillBadge(id: id, badge: .nouveautes) }
+        else { clearPillBadge(id: id) }
+    }
+
+    /// Au lancement : la pastille dalil existe dès que des enveloppes sont rangées sur le disque.
+    @MainActor
+    func restaurerPastilleDalil() {
+        guard !DalilEnveloppesStore.shared.enveloppes.isEmpty else { return }
+        upsertExternalAgent(id: DalilEnveloppesStore.pillId, name: "dalil")
+        rafraichirBadgeDalil()
     }
 
     @MainActor

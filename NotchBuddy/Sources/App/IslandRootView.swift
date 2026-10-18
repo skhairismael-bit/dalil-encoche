@@ -708,6 +708,7 @@ struct ClaudePlanHeaderPill: View {
 
 struct CompactMiniGrid: View {
     @ObservedObject var state: AppState
+    @ObservedObject var dalil = DalilEnveloppesStore.shared
 
     private var others: [AgentTask] {
         Array(state.tasks.filter { $0.id != state.focusId }.prefix(4))
@@ -720,6 +721,12 @@ struct CompactMiniGrid: View {
                 MiniBotCanvasView(task: task)
                     .frame(width: 12 / 0.6, height: 12 / 0.6)
                     .frame(width: 12, height: 12, alignment: .center)
+                    .overlay(alignment: .topTrailing) {
+                        // Dalil : un point ambre tant qu'une enveloppe d'Annour n'est pas vue.
+                        if task.id == DalilEnveloppesStore.pillId, dalil.nonVues > 0 {
+                            Circle().fill(Color(hex: "#F2B84B")).frame(width: 5, height: 5).offset(x: 1, y: -1)
+                        }
+                    }
             }
         }
         .frame(width: 28, height: 28)
