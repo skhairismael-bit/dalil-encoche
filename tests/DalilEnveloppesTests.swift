@@ -46,6 +46,12 @@ let sansVersion = DalilBoite.decoder(Data("{\"enveloppes\":[]}".utf8))
 verifier(sansVersion?.version == DalilBoite.versionActuelle, "JSON sans version = version actuelle")
 verifier(DalilBoite.decoder(Data("{}".utf8))?.enveloppes.isEmpty == true, "JSON vide = boîte vide")
 
+verifier(DalilBoite.resume("2 nouveautés dans Annour : 2 billets lus · 16:42") == "2 billets lus", "résumé : préfixe et heure retirés")
+verifier(DalilBoite.resume("1 nouveauté dans Annour : 1 vol modifié · 09:05") == "1 vol modifié", "résumé au singulier")
+verifier(DalilBoite.resume("3 nouveautés dans Annour : 2 billets lus, 1 vol modifié · 16:42") == "2 billets lus, 1 vol modifié", "résumé à deux comptes")
+verifier(DalilBoite.resume("Dalil n’a plus accès à Annour : relancer autoriser.mjs · 16:42") == "Dalil n’a plus accès à Annour : relancer autoriser.mjs", "alerte : seule l'heure retirée")
+verifier(DalilBoite.resume("texte libre") == "texte libre", "texte inconnu rendu tel quel")
+
 let tz = TimeZone(identifier: "Europe/Brussels")!
 verifier(DalilBoite.heure(t0, fuseau: tz) == "09:00", "heure courte au fuseau donné (1 800 000 000 s = 15/01/2027 08:00 UTC, +1 en hiver)")
 

@@ -5199,7 +5199,7 @@ struct DalilEnveloppesView: View {
                                     .font(.system(size: 11, weight: .medium).monospacedDigit())
                                     .foregroundColor(Color(hex: "#F2B84B"))
                                     .fixedSize()
-                                Text(e.texte)
+                                Text(DalilBoite.resume(e.texte))
                                     .font(.system(size: 12, weight: i == 0 ? .semibold : .regular))
                                     .foregroundColor(Color(hex: e.vue ? "#B8BCC4" : "#F5F6F8"))
                                     .lineLimit(1)

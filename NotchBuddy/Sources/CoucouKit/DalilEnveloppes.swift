@@ -57,6 +57,21 @@ struct DalilBoite: Codable, Equatable {
         return try? dec.decode(DalilBoite.self, from: data)
     }
 
+    /// Ce qui change, pour la liste de l'île : « 2 nouveautés dans Annour : 2 billets lus · 16:42 »
+    /// devient « 2 billets lus » (l'heure est déjà à gauche de la ligne). Un texte d'une autre forme
+    /// (alerte de jeton, charge inconnue) est rendu tel quel.
+    static func resume(_ texte: String) -> String {
+        var t = texte
+        if let fin = t.range(of: " · ", options: .backwards), t[fin.upperBound...].range(of: #"^\d{1,2}:\d{2}$"#, options: .regularExpression) != nil {
+            t = String(t[..<fin.lowerBound])
+        }
+        if t.range(of: #"^\d+ nouveaut[ée]s? dans Annour : "#, options: .regularExpression) != nil,
+           let sep = t.range(of: " : ") {
+            t = String(t[sep.upperBound...])
+        }
+        return t
+    }
+
     /// « 16:42 » au fuseau donné (celui du Mac par défaut).
     static func heure(_ date: Date, fuseau: TimeZone = .current) -> String {
         let f = DateFormatter()
