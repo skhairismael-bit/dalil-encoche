@@ -30,10 +30,22 @@ if [ -d "${TARGET}" ]; then
   fi
 fi
 
-echo "Building (DebugCloud)..."
+# Without an "Apple Development" identity (no Apple developer account on this Mac), the
+# DebugCloud build cannot be signed: fall back to the unsigned Debug build. Permissions
+# then have to be granted again after each build, but there is still one Dalil only.
+if security find-identity -v -p codesigning 2>/dev/null | grep -q "Apple Development"; then
+  SCHEME="NotchBuddyCloud"; CONFIG="DebugCloud"; SIGN_FLAGS="-allowProvisioningUpdates"
+else
+  SCHEME="NotchBuddy"; CONFIG="Debug"; SIGN_FLAGS=""
+  echo "No Apple Development identity: building unsigned (Debug)."
+fi
+BUILT="${DERIVED}/Build/Products/${CONFIG}/Dalil.app"
+
+echo "Building (${CONFIG})..."
 cd "${REPO_ROOT}/NotchBuddy"
 xcodegen >/dev/null
-xcodebuild -scheme NotchBuddyCloud -configuration DebugCloud -allowProvisioningUpdates \
+# shellcheck disable=SC2086
+xcodebuild -scheme "${SCHEME}" -configuration "${CONFIG}" ${SIGN_FLAGS} \
   -derivedDataPath "${DERIVED}" -quiet build
 
 echo "Quitting Dalil..."
