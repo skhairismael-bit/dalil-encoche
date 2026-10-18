@@ -1098,7 +1098,7 @@ final class BotEngine: ObservableObject {
         guard dancingLevel > 0.001 else { return }
         let W = size.width, H = size.height, R = W * 0.3
         let px = W / 2 + ox * R
-        let py = H / 2 + particleOverhang / 2 + oy * R + R * 0.06 + R * 0.88
+        let py = H / 2 + particleOverhang / 2 + oy * R + R * 0.06 + R * DalilLook.current.ryK
         let beat = CGFloat(CACurrentMediaTime()) * 112 / 60
         let hop = abs(sin(.pi * beat)), land = pow(1 - hop, 6), l = dancingLevel
         ctx.translateBy(x: px + 0.08 * R * sin(.pi * beat) * l, y: py - 0.20 * R * hop * l)
@@ -1113,8 +1113,8 @@ final class BotEngine: ObservableObject {
         let W = size.width
         let H = size.height
         let R = W * 0.3
-        let rx = R * 1.14
-        let ry = R * 0.88
+        let rx = R * DalilLook.current.rxK
+        let ry = R * DalilLook.current.ryK
 
         let cx = W / 2 + ox * R
         // particleOverhang shifts the bot body down in canvas coords so hearts can fly into
@@ -1133,6 +1133,9 @@ final class BotEngine: ObservableObject {
         drawBody(ctx: &ctx, path: bodyPath, R: R, rx: rx, ry: ry,
                  pumpkinColors: outfit == .pumpkin && !isMini)
 
+        // Kept before the clips below: the mark may stick out of the body.
+        let unclippedCtx = ctx
+
         // A warm Mac flushes him (MochiMood.swift).
         drawMoodTint(ctx: &ctx, path: bodyPath, rx: rx, ry: ry)
 
@@ -1144,6 +1147,12 @@ final class BotEngine: ObservableObject {
 
         // Eyes
         drawEyes(ctx: &ctx, path: bodyPath, R: R, rx: rx, ry: ry)
+
+        // Dalil's mark (flame, needle…), hidden while morphing into the mailbox
+        if morph < 0.05 {
+            var markCtx = unclippedCtx
+            DalilLook.current.drawMark(ctx: &markCtx, R: R, rx: rx, ry: ry, isMini: isMini)
+        }
 
         // Mouth hole — dark pill cutout inside the box face
         // Spec: left/right margins 0.10R, top margin 0.08R from box top (-0.94R)
@@ -1201,8 +1210,8 @@ final class BotEngine: ObservableObject {
         let R = W * 0.3
         // Only draw hands when Mochi is large enough to be meaningful (not compact/peek)
         guard R > 14 else { return }
-        let rx = R * 1.14
-        let ry = R * 0.88
+        let rx = R * DalilLook.current.rxK
+        let ry = R * DalilLook.current.ryK
         let cx = W / 2 + ox * R
         let cy = H / 2 + particleOverhang / 2 + oy * R + R * 0.06
 
@@ -1302,8 +1311,8 @@ final class BotEngine: ObservableObject {
         let W = size.width
         let H = size.height
         let R = W * 0.3
-        let rx = R * 1.14
-        let ry = R * 0.88
+        let rx = R * DalilLook.current.rxK
+        let ry = R * DalilLook.current.ryK
         let cx = W / 2 + ox * R
         let cy = H / 2 + particleOverhang / 2 + oy * R + R * 0.06
 
@@ -1366,7 +1375,7 @@ final class BotEngine: ObservableObject {
 
     private func mochiPath(rx: CGFloat, ry: CGFloat, morph: CGFloat, R: CGFloat) -> Path {
         let n = 72
-        let expN: CGFloat = 2.0 / 2.7
+        let expN: CGFloat = DalilLook.current.expN
         // Target mailbox dims (spec: 1.0R wide, 0.94R tall, 0.42R corner radius)
         let tw = R * 1.0
         let th = R * 0.94
@@ -1441,8 +1450,8 @@ final class BotEngine: ObservableObject {
             ctx.fill(path, with: .color(Color(cgColor: bc)))
         } else {
             // Main bot: linear gradient body
-            let top: Color = pumpkinColors ? Color(hex: "#FFA94D") : Color(red: 0.929, green: 0.929, blue: 0.937)
-            let bot: Color = pumpkinColors ? Color(hex: "#E8590C") : Color(red: 0.769, green: 0.773, blue: 0.792)
+            let top: Color = pumpkinColors ? Color(hex: "#FFA94D") : DalilLook.current.bodyTop
+            let bot: Color = pumpkinColors ? Color(hex: "#E8590C") : DalilLook.current.bodyBottom
             ctx.fill(path, with: .linearGradient(
                 Gradient(colors: [top, bot]),
                 startPoint: CGPoint(x: rx*0.7, y: -ry*0.85),
@@ -1524,7 +1533,7 @@ final class BotEngine: ObservableObject {
             let fx = lerp(f.fx, 1, morph * 0.7)
             let fy = lerp(f.fy, 1, morph * 0.7)
 
-            let eyeMult: CGFloat = isMini ? 1.9 : 1.0
+            let eyeMult: CGFloat = isMini ? 1.9 : DalilLook.current.eyeMult
             // Stressed (MochiMood.swift): a little smaller, like pupils tightening with fear,
             // and trembling.
             let fear = isMini ? 0 : min(1, moodBusy * 1.3)
@@ -1539,7 +1548,7 @@ final class BotEngine: ObservableObject {
     }
 
     private func drawEyeShape(ctx: inout GraphicsContext, shape: EyeShape, w: CGFloat, h: CGFloat, open: CGFloat, sd: CGFloat, R: CGFloat) {
-        let ink = isMini ? Color(cgColor: MochiConst.miniInk) : Color(cgColor: MochiConst.ink)
+        let ink = isMini ? Color(cgColor: MochiConst.miniInk) : Color(cgColor: DalilLook.current.ink)
         let now = CGFloat(CACurrentMediaTime())
 
         switch shape {
