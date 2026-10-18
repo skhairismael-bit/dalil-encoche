@@ -35,9 +35,9 @@ enum VoiceSettings {
         set { UserDefaults.standard.set(newValue, forKey: captionEnabledKey) }
     }
 
-    /// Language Coucou ANSWERS in: "en" (default) or "fr".
+    /// Language Dalil ANSWERS in: "fr" (default) or "en".
     static var language: String {
-        get { UserDefaults.standard.string(forKey: "voiceLanguage") ?? "en" }
+        get { UserDefaults.standard.string(forKey: "voiceLanguage") ?? "fr" }
         set { UserDefaults.standard.set(newValue, forKey: "voiceLanguage") }
     }
     static var answerLocale: Locale { Locale(identifier: language == "fr" ? "fr-FR" : "en-US") }

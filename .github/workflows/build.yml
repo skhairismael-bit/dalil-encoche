@@ -95,6 +95,9 @@ jobs:
       - name: Dalil bridge tests
         run: bash scripts/test-dalil-pont.sh
 
+      - name: Dalil voice tests
+        run: bash scripts/test-dalil-voix.sh
+
       - name: Test plan gauge
         run: bash scripts/test-plan-gauge.sh
 

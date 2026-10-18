@@ -113,6 +113,17 @@ enum DalilPontTests {
         verifier(autre.last == .fin("Bonjour cher toi !"), "nouvelle conversation répondue")
         verifier(lu("lancements").split(separator: "\n").count == 2, "nouvelle conversation = nouveau processus")
 
+        // Préparer au mot d'appel : le processus part avant la question, puis la sert.
+        let voix = UUID()
+        p.preparer(conversation: voix, modele: "sonnet", consigne: "c")
+        try? await Task.sleep(nanoseconds: 300_000_000)
+        verifier(lu("lancements").split(separator: "\n").count == 3, "préparer lance le processus")
+        let preparee = await tout(p.question("Quoi de neuf", conversation: voix, modele: "sonnet", consigne: "c"))
+        verifier(preparee.last == .fin("Bonjour cher toi !"), "question servie par le processus préparé")
+        p.preparer(conversation: voix, modele: "sonnet", consigne: "c")
+        try? await Task.sleep(nanoseconds: 300_000_000)
+        verifier(lu("lancements").split(separator: "\n").count == 3, "préparer deux fois ne relance pas")
+
         // Une seule question à la fois ; fermer termine en silence.
         setenv("FAUX_MODE", "muet", 1)
         let lente = UUID()

@@ -335,12 +335,20 @@ final class IslandWindowController: NSWindowController {
         ) { [weak self] note in
             let isDirect = (note.object as? String) == "direct"
             Task { @MainActor [weak self] in
+                // A second "OK Dalil" while Dalil looks in Annour is ignored: one question at a time.
+                if !isDirect, DalilVoix.shared.enCours {
+                    VoiceEngine.shared.cancelListening()
+                    appendAppLog("nb.log", "[Voice] wake ignored, Dalil is answering")
+                    return
+                }
                 // Genuine wake phrase (not programmatic re-listen) → clear any pending question
                 AppState.shared.voiceActive = true
                 AppState.shared.voiceSubState = .listening
                 self?.voiceContextExpiry?.cancel()
                 if !isDirect {
                     VoiceActionRunner.shared.pendingQuestion = nil
+                    // claude connects to Annour while I speak (2 s saved).
+                    if DalilVoix.isActive { DalilVoix.shared.ouvrir() }
                     // The island stays compact now: the tick says "I heard OK Coucou".
                     if AppState.shared.soundEnabled { SoundEngine.shared.play("tick") }
                 }
@@ -374,6 +382,7 @@ final class IslandWindowController: NSWindowController {
                         // No answer to Coucou's question: stop listening.
                         self.closeVoiceTurn()
                     } else {
+                        DalilVoix.shared.fermer()
                         self.fsm.voiceFinished()
                     }
                 } else {
@@ -630,6 +639,8 @@ final class IslandWindowController: NSWindowController {
             VoiceCaptionManager.shared.hide(after: 0)
             AppState.shared.voiceResult = nil
             AppState.shared.voiceActive = false
+            // Dalil's pending answer is dropped with the exchange.
+            DalilVoix.shared.fermer()
         }
         #endif
         // Keep the FSM in step with what is on screen (home/coucou → petit now).
@@ -1485,6 +1496,13 @@ extension IslandWindowController {
         // Mochi transitions to "thinking" while we process
         AppState.shared.voiceSubState = .thinking
 
+        // ── Dalil: every phrase is a question to Annour, through Claude Code ────────
+        // No fallback to the phrase parser: Dalil answers from Annour, or says it can't.
+        if runner.pendingQuestion == nil, DalilVoix.isActive {
+            await handleWithDalil(transcript)
+            return
+        }
+
         // ── Claude as the brain (Settings → Voice, the user's Anthropic key) ───────
         // Every phrase goes to Claude, which acts with Coucou's tools. Only when Claude
         // can't be reached does the phrase parser below take over.
@@ -1829,7 +1847,7 @@ extension IslandWindowController {
     private func finishVoiceTurn(expectAnswer: Bool) {
         // First time I speak one language and Coucou answers in another: offer once to
         // answer in mine ("You're speaking French. Want me to answer in French?").
-        if !expectAnswer, !ClaudeVoiceBrain.isActive, !VoiceSettings.languageOfferDone,
+        if !expectAnswer, !ClaudeVoiceBrain.isActive, !DalilVoix.isActive, !VoiceSettings.languageOfferDone,
            let spoken = VoiceEngine.shared.speechLocale?.language.languageCode?.identifier,
            ["fr", "en"].contains(spoken), spoken != VoiceSettings.language,
            VoiceEngine.shared.isEnabled {
@@ -1851,13 +1869,42 @@ extension IslandWindowController {
         // (unless that reply leads to another question, e.g. "which one do I remove?").
         if expectAnswer && VoiceEngine.shared.isEnabled {
             isInConversation = true
-            if !ClaudeVoiceBrain.isActive { VoiceBrain.shared.beginConversation() }
+            if !ClaudeVoiceBrain.isActive, !DalilVoix.isActive { VoiceBrain.shared.beginConversation() }
             if AppState.shared.soundEnabled { SoundEngine.shared.play("tick") }
             AppState.shared.voiceSubState = .listening
             VoiceEngine.shared.startConversationTurn(firstWordTimeout: Self.answerWait(8.0))
         } else {
             closeVoiceTurn()
         }
+    }
+
+    /// One question to Dalil: "Looking in Annour…" while Claude Code reads it, then the
+    /// spoken answer, and a re-listen when Dalil asked something back. Nothing when the
+    /// exchange was closed during the wait.
+    @MainActor
+    private func handleWithDalil(_ transcript: String) async {
+        let fr = VoiceSettings.language == "fr"
+        VoiceCaptionManager.shared.setUserLine(transcript)
+        VoiceCaptionManager.shared.appendResponse(DalilVoixTexte.attente(francais: fr))
+        // A stale "finished speaking" handler must not reopen the mic during the wait.
+        VoiceSpeaker.shared.onDidFinish = nil
+        let t0 = Date()
+        guard let issue = await DalilVoix.shared.repondre(transcript) else { return }
+        appendAppLog("nb.log", "[Voice] Dalil turn \(Int(Date().timeIntervalSince(t0) * 1000)) ms")
+        let result: VoiceActionResult
+        switch issue {
+        case .reponse(let text):
+            consecutiveFailures = 0
+            VoiceTranscriptHistory.shared.record(transcript: transcript, note: text, origin: .brain)
+            result = VoiceActionResult(outcome: .success, message: text)
+        case .echec(let text):
+            voiceMissReaction()
+            result = VoiceActionResult(outcome: .failure, message: text)
+        }
+        VoiceCaptionManager.shared.clearResponse()
+        VoiceCaptionManager.shared.appendResponse(result.message)
+        AppState.shared.voiceResult = result
+        speakAndContinueConversation(result)
     }
 
     /// One turn with Claude: caption, spoken answer, and a re-listen when Claude asked
@@ -1945,6 +1992,7 @@ extension IslandWindowController {
     @MainActor
     private func closeVoiceTurn() {
         isInConversation = false
+        DalilVoix.shared.fermer()
         consecutiveFailures = 0
         hasSpokenPasCompris = false
         VoiceEngine.shared.endConversation()

@@ -1373,7 +1373,7 @@ struct SettingsView: View {
     #if !APPSTORE
     @State private var voicePermissionsGranted: Bool = false
     @ObservedObject private var voiceEngine = VoiceEngine.shared
-    @AppStorage("voiceLanguage")       private var voiceLanguage: String = "en"
+    @AppStorage("voiceLanguage")       private var voiceLanguage: String = "fr"
     @AppStorage("voiceListenLanguage") private var listenLanguage: String = "auto"
     @AppStorage("voiceTTSEngine")      private var ttsEngine: String = "system"
     @AppStorage("voiceElevenGender")   private var elevenGender: String = "female"
@@ -1401,16 +1401,18 @@ struct SettingsView: View {
                 Toggle(String(localized: "Enable voice command"), isOn: $voiceEngine.isEnabled)
                     .disabled(!voicePermissionsGranted && !voiceEngine.isEnabled)
 
-                HStack(alignment: .top, spacing: 6) {
-                    Image(systemName: webKeySaved ? "checkmark.circle.fill" : "exclamationmark.circle")
-                        .foregroundColor(webKeySaved ? .green : .orange)
-                    Text(webKeySaved ? String(localized: "voice.setting-web-desc")
-                                     : String(localized: "voice.setting-web-nokey"))
-                        .font(.system(size: 11))
-                        .foregroundColor(.secondary)
-                        .fixedSize(horizontal: false, vertical: true)
+                if DalilVoixTexte.cleDemandee(dalilActif: DalilVoix.isActive) {
+                    HStack(alignment: .top, spacing: 6) {
+                        Image(systemName: webKeySaved ? "checkmark.circle.fill" : "exclamationmark.circle")
+                            .foregroundColor(webKeySaved ? .green : .orange)
+                        Text(webKeySaved ? String(localized: "voice.setting-web-desc")
+                                         : String(localized: "voice.setting-web-nokey"))
+                            .font(.system(size: 11))
+                            .foregroundColor(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    .onAppear { webKeySaved = !(KeychainStore.shared.get("anthropic-api-key") ?? "").isEmpty }
                 }
-                .onAppear { webKeySaved = !(KeychainStore.shared.get("anthropic-api-key") ?? "").isEmpty }
 
                 if voiceEngine.recognizerUnavailable {
                     HStack(spacing: 6) {

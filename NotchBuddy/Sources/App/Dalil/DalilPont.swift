@@ -100,6 +100,17 @@ final class DalilPont: @unchecked Sendable {
         }
     }
 
+    /// Lance le processus de la conversation `id` sans rien demander : claude se connecte à
+    /// Annour pendant que l'utilisateur parle (2 s de gagnées, mesuré le 19/10/2026). Un échec
+    /// reviendra à la première question.
+    func preparer(conversation id: UUID, modele: String, consigne: String) {
+        file.async { [self] in
+            guard conversation?.id != id else { return }
+            fermerSurFile()
+            if case .success(let c) = ouvrir(id: id, modele: modele, consigne: consigne) { conversation = c }
+        }
+    }
+
     /// Ferme la conversation `id` (ou celle en cours) : la question en attente se termine
     /// en silence, ce n'est pas une erreur.
     func fermer(conversation id: UUID? = nil) {
